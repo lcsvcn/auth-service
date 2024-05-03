@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
+dotenv = "0.15.0"
 oauth2 = "4.0.0-alpha.1"
 hyper = { version = "0.14", features = ["server"] }
 tokio = { version = "1", features = ["full"] }

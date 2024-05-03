@@ -10,6 +10,7 @@ use oauth2::{
 use oauth2::basic::BasicClient;
 use oauth2::reqwest::async_http_client;
 use tokio::sync::Mutex;
+use std::env;
 
 // This is a simple in-memory storage for access tokens. You should replace this with a proper database.
 #[derive(Debug)]
@@ -25,12 +26,21 @@ impl TokenStorage {
 
 #[tokio::main]
 async fn main() {
+    // Get OAuth2 client details from environment variables
+    dotenv::dotenv().ok();
+
+    let client_id = env::var("CLIENT_ID").expect("CLIENT_ID not set in .env");
+    let client_secret = env::var("CLIENT_SECRET").expect("CLIENT_SECRET not set in .env");
+    let auth_url = env::var("AUTH_URL").expect("AUTH_URL not set in .env");
+    let token_url = env::var("TOKEN_URL").expect("TOKEN_URL not set in .env");
+    let redirect_url = env::var("REDIRECT_URL").expect("REDIRECT_URL not set in .env");
+
     // Set up OAuth2 client details
-    let client_id = ClientId::new("your_client_id".to_string());
-    let client_secret = ClientSecret::new("your_client_secret".to_string());
-    let auth_url = AuthUrl::new(Url::parse("https://example.com/oauth2/authorize").unwrap().to_string());
-    let token_url = TokenUrl::new(Url::parse("https://example.com/oauth2/token").unwrap().to_string());
-    let redirect_url = RedirectUrl::new(Url::parse("http://localhost:8080/callback").unwrap().to_string());
+    let client_id = ClientId::new(client_id);
+    let client_secret = ClientSecret::new(client_secret);
+    let auth_url = AuthUrl::new(Url::parse(&auth_url).expect("Invalid AUTH_URL").to_string());
+    let token_url = TokenUrl::new(Url::parse(&token_url).expect("Invalid TOKEN_URL").to_string());
+    let redirect_url = RedirectUrl::new(Url::parse(&redirect_url).expect("Invalid REDIRECT_URL").to_string());
 
     // Create an OAuth2 client
     let client = BasicClient::new(

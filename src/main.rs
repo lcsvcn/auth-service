@@ -11,6 +11,7 @@ use oauth2::basic::BasicClient;
 use oauth2::reqwest::async_http_client;
 use tokio::sync::Mutex;
 use std::env;
+use std::net::{IpAddr, SocketAddr};
 
 // This is a simple in-memory storage for access tokens. You should replace this with a proper database.
 #[derive(Debug)]
@@ -33,14 +34,23 @@ async fn main() {
     let client_secret = env::var("CLIENT_SECRET").expect("CLIENT_SECRET not set in .env");
     let auth_url = env::var("AUTH_URL").expect("AUTH_URL not set in .env");
     let token_url = env::var("TOKEN_URL").expect("TOKEN_URL not set in .env");
-    let redirect_url = env::var("REDIRECT_URL").expect("REDIRECT_URL not set in .env");
+    let env_redirect_url = env::var("REDIRECT_URL").expect("REDIRECT_URL not set in .env");
+    let host = env::var("HOST").unwrap_or_else(|_| String::from("127.0.0.1"));
+    let port = env::var("PORT").unwrap_or_else(|_| String::from("8080"));
 
+
+    // Parse the port string into u16
+    let port: u16 = port.parse().expect("PORT must be a valid number");
+
+    // Parse the host string into IpAddr
+    let ip: IpAddr = host.parse().expect("Invalid host IP address");
+  
     // Set up OAuth2 client details
     let client_id = ClientId::new(client_id);
     let client_secret = ClientSecret::new(client_secret);
     let auth_url = AuthUrl::new(Url::parse(&auth_url).expect("Invalid AUTH_URL").to_string());
     let token_url = TokenUrl::new(Url::parse(&token_url).expect("Invalid TOKEN_URL").to_string());
-    let redirect_url = RedirectUrl::new(Url::parse(&redirect_url).expect("Invalid REDIRECT_URL").to_string());
+    let redirect_url = RedirectUrl::new(Url::parse(&env_redirect_url).expect("Invalid REDIRECT_URL").to_string());
 
     // Create an OAuth2 client
     let client = BasicClient::new(
@@ -55,15 +65,17 @@ async fn main() {
     let token_storage = Arc::new(Mutex::new(TokenStorage::new()));
 
     // Set up the HTTP server
-    let addr = ([127, 0, 0, 1], 8080).into();
+    let addr = SocketAddr::new(ip, port);
     let make_svc = make_service_fn(move |_| {
         let client = client.clone();
         let token_storage = token_storage.clone();
+        let env_redirect_url = env_redirect_url.clone(); // Clone the env_redirect_url variable
         async {
             Ok::<_, hyper::Error>(service_fn(move |req| {
                 let client = client.clone();
                 let token_storage = token_storage.clone();
-                handle_request(req, client, token_storage)
+                let env_redirect_url = env_redirect_url.clone(); // Clone the env_redirect_url variable
+                handle_request(req, client, env_redirect_url, token_storage)
             }))
         }
     });
@@ -80,11 +92,12 @@ async fn main() {
 async fn handle_request(
     req: Request<Body>,
     client: BasicClient,
+    redirect_url: String,
     token_storage: Arc<Mutex<TokenStorage>>,
 ) -> Result<Response<Body>, hyper::Error> {
     // Handle authorization callback
     if let Some(query) = req.uri().query() {
-        let code = Url::parse(&format!("http://localhost:8080/callback?{}", query))
+        let code = Url::parse(&format!("{}?{}", redirect_url, query))
             .unwrap()
             .query_pairs()
             .find(|(key, _)| key == "code")

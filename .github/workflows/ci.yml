@@ -1,0 +1,25 @@
+name: Cargo CI
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: actions/setup-rust@v1
+        with:
+          rust-version: stable
+
+      - name: Install Cargo
+        run: sudo apt-get install cargo
+
+      - name: Run Cargo tests
+        run: cargo test

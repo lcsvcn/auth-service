@@ -1,0 +1,28 @@
+name: Auto approve and merge PRs by dependabot
+
+on: pull_request
+
+jobs:
+  autoapprove:
+    name: Auto Approve a PR by dependabot
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    steps:
+      - name: Auto approve
+        uses: hmarr/auto-approve-action@v4
+        with:
+          review-message: "Auto approved automated PR"
+          github-token: ${{ secrets.AUTO_MERGE_TOKEN }}
+
+  automerge:
+    name: Auto merge after successful checks
+    needs: autoapprove
+    runs-on: ubuntu-latest
+    steps:
+      - name: Auto merge
+        uses: pascalgn/automerge-action@v0.16.3
+        if: github.actor == 'dependabot[bot]' || github.actor == 'dependabot-preview[bot]'
+        env:
+          GITHUB_TOKEN: ${{ secrets.AUTO_MERGE_TOKEN }}
+          MERGE_METHOD: rebase
+          MERGE_LABELS: dependencies

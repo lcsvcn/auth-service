@@ -1,0 +1,41 @@
+name: Autoformat with Cargo Rustfmt
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  autoformat:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.AUTO_MERGE_TOKEN }}
+
+      - name: Set up Rust
+        uses: actions/setup-rust@v1
+        with:
+          rust-version: stable
+
+      - name: Install Cargo
+        run: sudo apt-get install cargo
+
+      - name: Install Rustfmt
+        run: cargo install rustfmt
+
+      - name: Run Rustfmt
+        run: cargo fmt --all -- --check
+
+      - name: Apply Rustfmt Changes
+        run: cargo fmt --all
+
+      - uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: Apply Rustfmt changes
+          push_options: --force

@@ -1,0 +1,14 @@
+[debug]
+address = "127.0.0.1"
+port = 1234
+log = "normal"
+
+[staging]
+address = "0.0.0.0"
+port = 1234
+log = "normal"
+
+[release]
+address = "0.0.0.0"
+port = 1234
+log = "critical"

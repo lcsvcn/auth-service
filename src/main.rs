@@ -71,6 +71,7 @@ async fn auth_handler(config: &State<Arc<Config>>, token_storage: &State<Arc<Mut
     status::Custom(Status::Ok, "Authentication handler")
 }
 
+
 #[get("/health")]
 async fn health_check_handler() -> status::Custom<&'static str> {
     status::Custom(Status::Ok, "OK")

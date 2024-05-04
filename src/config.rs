@@ -1,6 +1,6 @@
 use std::env;
-use std::net::IpAddr;
 use std::sync::Arc;
+use dotenv::dotenv;
 
 pub struct Config {
     pub client_id: String,
@@ -14,6 +14,9 @@ pub struct Config {
 
 impl Config {
     pub fn from_env() -> Arc<Self> {
+        // Load environment variables from .env file
+        dotenv().ok();
+
         let client_id = env::var("CLIENT_ID").expect("CLIENT_ID not set in .env");
         let client_secret = env::var("CLIENT_SECRET").expect("CLIENT_SECRET not set in .env");
         let auth_url = env::var("AUTH_URL").expect("AUTH_URL not set in .env");
@@ -31,13 +34,5 @@ impl Config {
             host,
             port,
         })
-    }
-
-    pub fn parse_port(&self) -> u16 {
-        self.port.parse().expect("PORT must be a valid number")
-    }
-
-    pub fn parse_host(&self) -> IpAddr {
-        self.host.parse().expect("Invalid host IP address")
     }
 }

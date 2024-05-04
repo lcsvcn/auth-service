@@ -1200,7 +1200,6 @@ name = "rust-auth"
 version = "0.1.0"
 dependencies = [
  "dotenv",
- "hyper",
  "oauth2",
  "rand",
  "rocket",

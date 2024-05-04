@@ -1,6 +1,7 @@
+use rand::{thread_rng, Rng, distributions::Alphanumeric};
 use std::sync::{Arc, Mutex};
 use rocket::{get, routes, Route, State, response::status, http::Status};
-use oauth2::{AuthorizationCode, AuthUrl, ClientId, ClientSecret, RedirectUrl, TokenUrl, url::Url, basic::BasicClient};
+use oauth2::{ AuthUrl, ClientId, ClientSecret, RedirectUrl, TokenUrl, url::Url, basic::BasicClient, CsrfToken};
 
 mod config;
 use crate::config::Config;
@@ -16,6 +17,25 @@ impl TokenStorage {
         TokenStorage { access_token: None }
     }
 }
+
+fn state_fn() -> CsrfToken{
+    // Implement your logic to generate a CsrfToken here
+    // For example, generate a random string
+    // You can use the same generate_state function from the previous example
+    CsrfToken::new(generate_state())
+}
+
+// Generate a random state string
+fn generate_state() -> String {
+    const STATE_LENGTH: usize = 32;
+    let rng = thread_rng();
+    let state: String = rng.sample_iter(&Alphanumeric)
+        .take(STATE_LENGTH)
+        .map(char::from)
+        .collect();
+    state
+}
+
 
 #[get("/auth")]
 async fn auth_handler(config: &State<Arc<Config>>, token_storage: &State<Arc<Mutex<TokenStorage>>>) -> status::Custom<&'static str> {
@@ -35,10 +55,19 @@ async fn auth_handler(config: &State<Arc<Config>>, token_storage: &State<Arc<Mut
     )
     .set_redirect_uri(redirect_url.unwrap());
 
-    // For demonstration purposes, this handler will just print the authentication URL
-    // let auth_request_string = format!("{}", client.authorize_url(&AuthorizationCode::new(query.code.clone())));
-    // println!("Authentication URL: {}", auth_request_string);
-    
+    // Generate the authentication URL
+    let auth_url = client.authorize_url(state_fn);
+
+    // Print the authentication URL
+    println!("Authentication URL: {:?}", auth_url);
+
+    // Assuming you have obtained the access token from the OAuth2 flow
+    let access_token = "your_access_token".to_string(); // Replace "your_access_token" with the actual access token
+
+    // Store the authentication URL or access token in TokenStorage
+    let mut token_storage = token_storage.lock().expect("Failed to acquire lock on TokenStorage");
+    token_storage.access_token = Some(access_token.clone()); // or set it to the actual access token obtained from OAuth2 flow
+
     status::Custom(Status::Ok, "Authentication handler")
 }
 

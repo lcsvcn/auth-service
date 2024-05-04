@@ -1,6 +1,6 @@
+use std::{sync::Arc, sync::Mutex, path::PathBuf};
 use rand::{thread_rng, Rng, distributions::Alphanumeric};
-use std::sync::{Arc, Mutex};
-use rocket::{get, routes, Route, State, response::status, http::Status};
+use rocket::{get, routes, Route, State, response::status, http::Status, fs::FileServer};
 use oauth2::{ AuthUrl, ClientId, ClientSecret, RedirectUrl, TokenUrl, url::Url, basic::BasicClient, CsrfToken};
 
 mod config;
@@ -75,11 +75,10 @@ async fn auth_handler(config: &State<Arc<Config>>, token_storage: &State<Arc<Mut
 async fn health_check_handler() -> status::Custom<&'static str> {
     status::Custom(Status::Ok, "OK")
 }
-
 #[rocket::main]
 async fn main() {
     // Initialize configuration
-     let config = Config::from_env();
+    let config = Config::from_env();
 
     // Create shared state for token storage
     let token_storage: Arc<Mutex<TokenStorage>> = Arc::new(Mutex::new(TokenStorage::new()));
@@ -87,12 +86,32 @@ async fn main() {
     // Define routes
     let routes: Vec<Route> = routes![auth_handler, health_check_handler];
 
-    // Launch Rocket with shared state
-    rocket::build()
+    // Mount routes
+    let rocket = rocket::build()
         .manage(config)
         .manage(token_storage)
-        .mount("/", routes)
+        .mount("/", routes);
+
+    // Mount the static folder
+    let rocket = if let Some(static_path) = find_static_path() {
+        rocket.mount("/static", FileServer::from(static_path))
+    } else {
+        rocket
+    };
+
+    // Launch Rocket with shared state
+    rocket
         .launch()
         .await
         .expect("Rocket server failed to launch");
+}
+
+// Helper function to find the static folder path
+fn find_static_path() -> Option<PathBuf> {
+    let static_path = std::env::current_dir().ok()?.join("static");
+    if static_path.exists() {
+        Some(static_path)
+    } else {
+        None
+    }
 }

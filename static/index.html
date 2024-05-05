@@ -58,6 +58,14 @@
             margin: 0;
         }
 
+        .text {
+            text-align: center;
+            padding-left: 16px;
+            padding-right: 16px;
+            margin-left: 16px;
+            margin-right: 16px;
+        }
+
         .btn {
             background-color: #007bff;
             color: #fff;
@@ -67,6 +75,10 @@
             cursor: pointer;
             transition: background-color 0.3s ease;
             margin-top: 20px;
+            padding-left: 36px;
+            padding-right: 36px;
+            margin-left: 36px;
+            margin-right: 36px;
         }
 
         .btn:hover {
@@ -190,7 +202,7 @@
 <body class="dark-theme">
     <div class="appbar">
         <img src="https://rocket.rs/images/box-logo.png" alt="Rocket Logo" class="logo">
-        <h1>Rocket Endpoints Test Page</h1>
+
         <div>
             <input type="checkbox" class="checkbox" id="checkbox">
             <label for="checkbox" class="checkbox-label">
@@ -201,8 +213,8 @@
         </div>
     </div>
     <div class="container">
-        <p style="text-align: center;">This is a test HTML file served by Rocket.</p>
-        <p style="text-align: center;">Use the buttons below to check the existing endpoints:</p>
+        <p class="text">This is a test HTML file served by Rocket.</p>
+        <p class="text">Use the buttons below to check the existing endpoints:</p>
         <!-- Endpoint buttons -->
         <a href="/auth" class="btn">Auth Endpoint</a>
         <a href="/health" class="btn">Health Endpoint</a>

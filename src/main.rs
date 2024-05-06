@@ -2,21 +2,19 @@ use std::{sync::Arc, sync::Mutex, path::PathBuf};
 use rand::{thread_rng, Rng, distributions::Alphanumeric};
 use rocket::{get, routes, Route, State, response::status, http::Status, fs::FileServer};
 use oauth2::{ AuthUrl, ClientId, ClientSecret, RedirectUrl, TokenUrl, url::Url, basic::BasicClient, CsrfToken};
+use serde_json::json;
 
 mod config;
+
+mod service {
+    pub mod redis;
+    pub mod token_storage;
+}
+
+use crate::service::{token_storage::TokenStorage, redis::RedisService};
 use crate::config::Config;
 
-// This is a simple in-memory storage for access tokens. You should replace this with a proper database.
-#[derive(Debug)]
-struct TokenStorage {
-    access_token: Option<String>,
-}
 
-impl TokenStorage {
-    fn new() -> Self {
-        TokenStorage { access_token: None }
-    }
-}
 
 fn state_fn() -> CsrfToken{
     // Implement your logic to generate a CsrfToken here
@@ -38,7 +36,7 @@ fn generate_state() -> String {
 
 
 #[get("/auth")]
-async fn auth_handler(config: &State<Arc<Config>>, token_storage: &State<Arc<Mutex<TokenStorage>>>) -> status::Custom<&'static str> {
+async fn auth_handler(config: &State<Arc<Config>>, token_storage: &State<Arc<Mutex<TokenStorage>>>, redis_service: &State<Arc<Mutex<RedisService>>>) -> status::Custom<&'static str> {
     // Get OAuth2 client details from configuration
     let client_id = ClientId::new(config.client_id.clone());
     let client_secret = ClientSecret::new(config.client_secret.clone());
@@ -68,7 +66,26 @@ async fn auth_handler(config: &State<Arc<Config>>, token_storage: &State<Arc<Mut
     let mut token_storage = token_storage.lock().expect("Failed to acquire lock on TokenStorage");
     token_storage.access_token = Some(access_token.clone()); // or set it to the actual access token obtained from OAuth2 flow
 
-    status::Custom(Status::Ok, "Authentication handler")
+
+     // Get the Redis service from the state
+     let mut redis_service = redis_service.lock().expect("Failed to acquire lock on RedisService");
+
+     let random_number: u32 = rand::thread_rng().gen_range(0..=10000000);
+
+    // Sample payload data for the create_user event
+    let event_payload = json!({
+        "event_type": "create_user",
+        "id": random_number,
+        "username": "example_user",
+        "email": "user@example.com",
+        // Add other fields as needed
+    });
+
+     // Send "create_user" event to Redis
+     match redis_service.send_event(&event_payload) {
+         Ok(_) => status::Custom(Status::Ok, "User Created Successfully!"),
+         Err(_) => status::Custom(Status::InternalServerError, "Failed to send event to Redis"),
+     }
 }
 
 
@@ -76,13 +93,27 @@ async fn auth_handler(config: &State<Arc<Config>>, token_storage: &State<Arc<Mut
 async fn health_check_handler() -> status::Custom<&'static str> {
     status::Custom(Status::Ok, "OK")
 }
+
+// Helper function to find the static folder path
+fn find_static_path() -> Option<PathBuf> {
+    let static_path = std::env::current_dir().ok()?.join("static");
+    if static_path.exists() {
+        Some(static_path)
+    } else {
+        None
+    }
+}
+
 #[rocket::main]
 async fn main() {
     // Initialize configuration
     let config = Config::from_env();
 
+    // Initialize Redis service
+    let redis_service = Arc::new(Mutex::new(RedisService::new(&config.redis_url)));
+
     // Create shared state for token storage
-    let token_storage: Arc<Mutex<TokenStorage>> = Arc::new(Mutex::new(TokenStorage::new()));
+    let token_storage= Arc::new(Mutex::new(TokenStorage::new()));
 
     // Define routes
     let routes: Vec<Route> = routes![auth_handler, health_check_handler];
@@ -90,6 +121,7 @@ async fn main() {
     // Mount routes
     let rocket = rocket::build()
         .manage(config)
+        .manage(redis_service) 
         .manage(token_storage)
         .mount("/", routes);
 
@@ -105,14 +137,4 @@ async fn main() {
         .launch()
         .await
         .expect("Rocket server failed to launch");
-}
-
-// Helper function to find the static folder path
-fn find_static_path() -> Option<PathBuf> {
-    let static_path = std::env::current_dir().ok()?.join("static");
-    if static_path.exists() {
-        Some(static_path)
-    } else {
-        None
-    }
 }

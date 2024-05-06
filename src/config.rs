@@ -10,6 +10,7 @@ pub struct Config {
     pub redirect_url: String,
     pub host: String,
     pub port: String,
+    pub redis_url: String
 }
 
 impl Config {
@@ -24,7 +25,8 @@ impl Config {
         let redirect_url = env::var("REDIRECT_URL").expect("REDIRECT_URL not set in .env");
         let host = env::var("HOST").unwrap_or_else(|_| String::from("127.0.0.1"));
         let port = env::var("PORT").unwrap_or_else(|_| String::from("8080"));
-
+        let redis_url = env::var("REDIS_URL").expect("REDIS_URL not set in .env");
+        
         Arc::new(Config {
             client_id,
             client_secret,
@@ -33,6 +35,7 @@ impl Config {
             redirect_url,
             host,
             port,
+            redis_url,
         })
     }
 }

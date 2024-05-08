@@ -1,6 +1,6 @@
 use serde_json::Value;
 use redis::{Client, Commands};
-
+    
 pub struct RedisService {
     client: Client,
 }
